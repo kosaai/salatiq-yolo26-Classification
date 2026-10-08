@@ -1,7 +1,6 @@
-import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Pressable,
   Image,
@@ -21,6 +20,7 @@ import { colors, lightColors } from '../constants/theme';
 import { useEngineConnection } from '../hooks/useEngineConnection';
 import { themeParam } from '../hooks/usePageTheme';
 import { usePrayerSession } from '../hooks/usePrayerSession';
+import { useSahwAudio } from '../hooks/useSahwAudio';
 
 export function HomeScreen() {
   const { width } = useWindowDimensions();
@@ -39,34 +39,7 @@ export function HomeScreen() {
   const horizontalPadding = width < 360 ? 12 : 16;
   const cardWidth = useMemo(() => Math.max(54, (width - horizontalPadding * 2 - 40 - 28) / 5), [horizontalPadding, width]);
   const latestSahwAlert = prayerState.sahwAlerts[prayerState.sahwAlerts.length - 1] ?? null;
-  const sahwPlayer = useAudioPlayer(require('../assets/audio/sahw-alert.mp3'));
-  const playedAlertIdsRef = useRef(new Set<string>());
-
-  const playSahwAlert = useCallback(() => {
-    void sahwPlayer.seekTo(0).then(() => sahwPlayer.play()).catch(() => {
-      // Audio failure must never affect the live prayer flow.
-    });
-  }, [sahwPlayer]);
-
-  useEffect(() => {
-    void setAudioModeAsync({ playsInSilentMode: true }).catch(() => {
-      // The alert remains non-blocking if an audio session cannot be configured.
-    });
-  }, []);
-
-  useEffect(() => {
-    playedAlertIdsRef.current.clear();
-  }, [sessionId]);
-
-  useEffect(() => {
-    if (!latestSahwAlert) return;
-
-    const alertId = `${latestSahwAlert.type}:${latestSahwAlert.rakah}:${latestSahwAlert.stageId ?? ''}`;
-    if (playedAlertIdsRef.current.has(alertId)) return;
-
-    playedAlertIdsRef.current.add(alertId);
-    playSahwAlert();
-  }, [latestSahwAlert, playSahwAlert]);
+  useSahwAudio(sessionId, prayerState.activeSahwEvent, latestSahwAlert);
 
   return (
     <LinearGradient colors={isDarkMode ? ['#16303F', colors.background] : ['#FFF9EC', lightColors.background]} locations={[0, 0.38]} style={styles.flex}>
